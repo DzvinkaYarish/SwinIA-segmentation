@@ -85,7 +85,7 @@ def mask_like_image(
     # I think, here comes a mistake in original implementation (np.sqrt used both for 2D and 3D images)
     # If we use square root for 3D images, we do not reach the required masking percentage
     # See test_dataset.py for checks
-    box_size = np.round(np.power(100 / mask_percentage, 1 / n_dim)).astype(np.int)
+    box_size = np.round(np.power(100 / mask_percentage, 1 / n_dim)).astype(np.int32)
     for c in range(n_channels):
         mask_coords = get_stratified_coords(box_size=box_size, shape=channel_shape)
         mask_coords = (mask_coords + (c,)) if channels_last else ((c,) + mask_coords)

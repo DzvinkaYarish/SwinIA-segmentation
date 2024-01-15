@@ -415,6 +415,6 @@ class SwinIA(nn.Module):
                 if i >= len(self.groups) - self.n_shortcuts and self.u_shape:
                     q = connect_shortcut(self.project_shortcut[i - len(self.groups)], q, shortcuts.pop())
                 q = group(q, k, v)
-        q = self.proj_last(q)
+        # q = self.proj_last(q)
         q = einops.rearrange(q, 'b ... c -> b c ...')
         return q

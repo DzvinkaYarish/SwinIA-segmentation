@@ -15,3 +15,5 @@ tqdm~=4.59.0
 h5py
 pandas
 einops
+lmdb
+
