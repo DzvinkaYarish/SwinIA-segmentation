@@ -238,10 +238,13 @@ class Evaluator(object):
         return out
 
     def load_checkpoint(self, checkpoint_path: str):
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
-        if "model" in checkpoint:
-            checkpoint["model"].pop("mask_kernel.kernel", None)
-            checkpoint = checkpoint["model"]
+        # checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        # if "model" in checkpoint:
+        #     checkpoint["model"].pop("mask_kernel.kernel", None)
+        #     checkpoint = checkpoint["model"]
+
+        # for segmentation only
+        checkpoint = torch.load(checkpoint_path)["model"]
         self.model.load_state_dict(checkpoint, strict=False)
 
     @torch.no_grad()
@@ -380,12 +383,14 @@ class Evaluator(object):
         empty_cache: bool = False,
     ) -> Tuple[Dict[str, T], float]:
         start = time.time()
-        with autocast(enabled=half):
-            try:
-                out = self.model.forward(batch['image'].to(self.device))
-            except RuntimeError as e:
-                raise RuntimeError(f"Error during inference on batch {batch['image'].shape}, "
-                                   f"half={half}, empty_cache={empty_cache}") from e
+        b = batch['image'].to(self.device)
+        with torch.no_grad():
+            with autocast(enabled=half):
+                try:
+                    out = self.model.forward(b)
+                except RuntimeError as e:
+                    raise RuntimeError(f"Error during inference on batch {batch['image'].shape}, "
+                                       f"half={half}, empty_cache={empty_cache}") from e
         end = time.time()
         if empty_cache:
             torch.cuda.empty_cache()
@@ -396,6 +401,7 @@ class Evaluator(object):
             batch: Dict[str, T],
             keys: List[str]
     ) -> Dict[str, np.ndarray]:
+        print(batch['image'].shape, batch['shape'])
         out = detach_to_np({k: batch[k] for k in keys}, batch['mean'], batch['std'])
         for k, v in out.items():
             out[k] = np.array([crop_as(im, sh) for im, sh in zip(v, batch['shape'])])

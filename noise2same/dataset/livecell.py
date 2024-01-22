@@ -24,19 +24,24 @@ class LiveCellDataset(AbstractNoiseDataset):
     add_blur_and_noise: bool = False
 
     def __str__(self) -> str:
-        return f'livecell_{self.mode}_{self.part}{"_deconv" if self.add_blur_and_noise else ""}'
+        return f'livecell_{self.mode}_{"_deconv" if self.add_blur_and_noise else ""}'
 
     def _validate(self) -> None:
-        assert self.mode in ("train", "val", "test")
+        assert self.mode in ("train", "val", "test", "debug", "test_random_500")
 
     def _create_image_index(self) -> Dict[str, Union[List[str], np.ndarray]]:
         coco = COCO(os.path.join(self.path, f'livecell/annotations/livecell_coco_{self.mode}.json'))
         imgs_paths = coco.loadImgs(coco.getImgIds())
+        print(imgs_paths)
 
         folder = 'livecell_train_val_images' if self.mode in ('train', 'val') else 'livecell_test_images'
         images = np.concatenate([np.expand_dims(np.array(Image.open(os.path.join(self.path, 'livecell/images', folder, img['file_name']))), 0) for img in tqdm(imgs_paths)])
-        seg_masks = np.concatenate([np.expand_dims(np.sum(np.array([coco.annToMask(obj) for obj in coco.loadAnns(coco.getAnnIds(imgIds=img['id']))]), axis=0), 0) for img in tqdm(imgs_paths)])
+        seg_masks = [np.sum(np.array([coco.annToMask(obj) for obj in coco.loadAnns(coco.getAnnIds(imgIds=img['id']))]), axis=0) for img in tqdm(imgs_paths)]
+        # seg_masks = [mask if mask else np.zeros((images.shape[-2], images.shape[-1])) for mask in seg_masks] # handle empty masks
+
+        seg_masks = np.concatenate(np.expand_dims(seg_masks, 0))
         seg_masks[seg_masks > 0] = 1
+        print(seg_masks.shape)
 
         return {
             'image': images,
@@ -50,7 +55,7 @@ class LiveCellDataset(AbstractNoiseDataset):
         # TODO understand why is it here
         self.mean = np.mean(image, keepdims=True, dtype=np.float32)[None, ...]
         self.std = np.std(image, keepdims=True, dtype=np.float32)[None, ...]
-        return {'image': image, 'ground_truth': self.image_index['ground_truth'][i], 'seg_mask': self.image_index['seg_mask'][i]}
+        return {'image': image, 'ground_truth': self.image_index['ground_truth'][i], 'gt_mask': self.image_index['seg_mask'][i]}
 
     def _add_blur_and_noise(self, image: np.ndarray) -> np.ndarray:
         image = normalize(image)
