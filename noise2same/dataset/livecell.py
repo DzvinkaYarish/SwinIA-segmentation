@@ -27,13 +27,11 @@ class LiveCellDataset(AbstractNoiseDataset):
         return f'livecell_{self.mode}_{"_deconv" if self.add_blur_and_noise else ""}'
 
     def _validate(self) -> None:
-        assert self.mode in ("train", "val", "test", "debug", "test_random_500")
+        assert self.mode in ("train", "val", "test", "debug", "test_random_500", "test_random_50")
 
     def _create_image_index(self) -> Dict[str, Union[List[str], np.ndarray]]:
         coco = COCO(os.path.join(self.path, f'livecell/annotations/livecell_coco_{self.mode}.json'))
         imgs_paths = coco.loadImgs(coco.getImgIds())
-        print(imgs_paths)
-
         folder = 'livecell_train_val_images' if self.mode in ('train', 'val') else 'livecell_test_images'
         images = np.concatenate([np.expand_dims(np.array(Image.open(os.path.join(self.path, 'livecell/images', folder, img['file_name']))), 0) for img in tqdm(imgs_paths)])
         seg_masks = [np.sum(np.array([coco.annToMask(obj) for obj in coco.loadAnns(coco.getAnnIds(imgIds=img['id']))]), axis=0) for img in tqdm(imgs_paths)]

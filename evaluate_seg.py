@@ -80,7 +80,7 @@ from skimage.filters import threshold_otsu
 log = logging.getLogger(__name__)
 
 
-from sklearn.metrics import f1_score, accuracy_score, precision_score
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 
 
 def accuracy_seg(pred_mask, gt_mask):
@@ -90,6 +90,8 @@ def accuracy_seg(pred_mask, gt_mask):
 def precision_seg(pred_mask, gt_mask):
     return np.max([precision_score(gt_mask.flatten(), pred_mask.flatten()), precision_score(gt_mask.flatten(), 1 - pred_mask.flatten())])
 
+def recall_seg(pred_mask, gt_mask):
+    return np.max([recall_score(gt_mask.flatten(), pred_mask.flatten()), recall_score(gt_mask.flatten(), 1 - pred_mask.flatten())])
 
 def get_seg_masks(batch): # ToDO: batch size is 1, extend to batch size > 1
     feature_map = batch['image'][0].transpose(1,2,0).reshape(-1, batch['shape'][0])
@@ -101,12 +103,10 @@ def get_seg_masks(batch): # ToDO: batch size is 1, extend to batch size > 1
 
 
 def f1_score_seg(pred_mask, gt_mask):
-    print(pred_mask.shape, gt_mask.shape)
     return np.max([f1_score(gt_mask.flatten(), pred_mask.flatten()), f1_score(gt_mask.flatten(), 1 - pred_mask.flatten())])
 
 
 def iou(pred_mask, gt_mask):
-    print(pred_mask.shape, gt_mask.shape)
     if gt_mask.shape != pred_mask.shape:
         raise ValueError("Input masks must have the same shape")
 
@@ -114,7 +114,7 @@ def iou(pred_mask, gt_mask):
     union = np.logical_or(gt_mask, pred_mask)
 
     if np.sum(union) == 0:
-        iou_0 =  0.0
+        iou_0 = 0.0
     else:
         iou_0 = np.sum(intersection) / np.sum(union)
 
@@ -130,7 +130,7 @@ def iou(pred_mask, gt_mask):
 
 
 def seg_scores(pred_mask, gt_mask, prefix='seg_'):
-    metrics_fn = {'accuracy': accuracy_seg, 'precision': precision_seg, 'f1': f1_score_seg, 'iou': iou}
+    metrics_fn = {'accuracy': accuracy_seg, 'recall': recall_seg, 'precision': precision_seg, 'f1': f1_score_seg, 'iou': iou}
     scores = {prefix + metric: metrics_fn[metric](pred_mask, gt_mask) for metric in metrics_fn.keys()}
     return scores
 
@@ -205,7 +205,7 @@ def evaluate(
         save_results: bool = True,
         verbose: bool = True,
         keep_images: bool = False,
-        metrics: Tuple[str, ...] = ("accuracy", "precision", "iou", "f1"),
+        metrics: Tuple[str, ...] = ("accuracy", "recall", "precision", "iou", "f1"),
 ):
     train_dir = train_dir or ''
     log.info(f"Evaluate dataset {str(dataset)} for key {cfg.evaluate.key} in train_dir {train_dir}")
